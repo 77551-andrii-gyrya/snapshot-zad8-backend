@@ -283,6 +283,56 @@ function attachLiveValidation() {
     });
 }
 
+// ============ FUNKCJE DO KOMUNIKACJI Z SUPABASE ============
+async function fetchAllMessages() {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
+    
+    const text = await response.text();
+    if (!text || !text.trim()) return [];
+    return JSON.parse(text);
+}
+
+async function displayAllMessages() {
+    try {
+        const messages = await fetchAllMessages();
+        let historySection = document.getElementById('messagesHistory');
+        if (!historySection) {
+            historySection = document.createElement('div');
+            historySection.id = 'messagesHistory';
+            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px;';
+            const formCard = document.querySelector('.form-card');
+            if (formCard) formCard.appendChild(historySection);
+        }
+        if (!messages || messages.length === 0) {
+            historySection.style.display = 'none';
+            return;
+        }
+        historySection.style.display = 'block';
+        historySection.innerHTML = `
+            <h3>📋 Historia zapisanych wiadomości (Supabase - PostgreSQL)</h3>
+            <ul style="max-height: 250px; overflow-y: auto; padding-left: 20px;">
+                ${messages.map(msg => `
+                    <li style="margin: 10px 0; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <strong>${escapeHtml(msg.first_name)} ${escapeHtml(msg.last_name)}</strong> 
+                        (${escapeHtml(msg.email)})<br>
+                        <small>📅 ${new Date(msg.created_at).toLocaleString()}</small><br>
+                        <em>${escapeHtml(msg.message)}</em>
+                    </li>
+                `).join('')}
+            </ul>
+            <small>📁 Dane przechowywane w chmurze Supabase (PostgreSQL)</small>
+        `;
+    } catch (error) {
+        console.warn('Nie można wyświetlić historii:', error);
+    }
+}
+
 async function saveToBackend(formData) {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
         method: 'POST',
@@ -304,14 +354,10 @@ async function saveToBackend(formData) {
         try {
             const error = await response.json();
             errorMessage = error.message || errorMessage;
-        } catch(e) {
-            // Ignoruj błąd parsowania JSON w odpowiedzi błędu
-        }
+        } catch(e) {}
         throw new Error(errorMessage);
     }
     
-    // Supabase zwraca pustą odpowiedź lub tablicę z danymi
-    // Spróbuj sparsować JSON, ale jeśli się nie uda – zwróć pusty obiekt
     try {
         const text = await response.text();
         if (text && text.trim()) {
@@ -323,7 +369,7 @@ async function saveToBackend(formData) {
     }
 }
 
-// ============ OBSŁUGA WYSYŁANIA FORMULARZA (z zapisem do Supabase) ============
+// ============ OBSŁUGA WYSYŁANIA FORMULARZA ============
 async function onSubmitHandler(event) {
     event.preventDefault();
     resetFeedback();
@@ -369,9 +415,7 @@ async function onSubmitHandler(event) {
             </div>
         `;
         
-        // 🔄 ODSWieŻENIE LISTY WIADOMOŚCI
         await displayAllMessages();
-        
         form.reset();
         clearAllErrorsAndFeedback();
         
@@ -390,7 +434,7 @@ async function onSubmitHandler(event) {
     }
 }
 
-// ============ DYNAMICZNE ŁADOWANIE DANYCH Z JSON (z fallbackiem) ============
+// ============ DYNAMICZNE ŁADOWANIE DANYCH Z JSON ============
 const appContainer = document.getElementById('app');
 
 function generateProjectsList(projekty) {
@@ -405,54 +449,27 @@ function generateProjectsList(projekty) {
     let html = '<ol>';
 
     if (cSharpProjects.length > 0) {
-        html += `
-            <li>
-                <h3>Niektóre projekty z korzystaniem C#:</h3>
-                <ul>
-        `;
+        html += `<li><h3>Niektóre projekty z korzystaniem C#:</h3><ul>`;
         cSharpProjects.forEach(proj => {
             const linkHtml = proj.link ? `<u><a href="${proj.link}" target="_blank">Kod programu</a></u>` : '';
-            html += `
-                <li>
-                    <i>${proj.nazwa}</i> ${linkHtml}
-                    <p><i>O projekcie:</i> ${proj.opis}</p>
-                </li>
-            `;
+            html += `<li><i>${proj.nazwa}</i> ${linkHtml}<p><i>O projekcie:</i> ${proj.opis}</p></li>`;
         });
         html += `</ul></li>`;
     }
 
     if (sqlProjects.length > 0) {
-        html += `
-            <li>
-                <h3><b>Jeden z projektów z korzystaniem SQL:</b></h3>
-                <ul>
-        `;
+        html += `<li><h3><b>Jeden z projektów z korzystaniem SQL:</b></h3><ul>`;
         sqlProjects.forEach(proj => {
-            html += `
-                <li>
-                    <i>${proj.nazwa}</i>
-                    <p><i>O projekcie:</i> ${proj.opis}</p>
-                </li>
-            `;
+            html += `<li><i>${proj.nazwa}</i><p><i>O projekcie:</i> ${proj.opis}</p></li>`;
         });
         html += `</ul></li>`;
     }
 
     if (htmlProjects.length > 0) {
-        html += `
-            <li>
-                <h3><b>Jeden z projektów z korzystaniem HTML:</b></h3>
-                <ul>
-        `;
+        html += `<li><h3><b>Jeden z projektów z korzystaniem HTML:</b></h3><ul>`;
         htmlProjects.forEach(proj => {
             const linkHtml = proj.link ? `<u><a href="${proj.link}" target="_blank">Link do strony</a></u>` : '';
-            html += `
-                <li>
-                    <i>${proj.nazwa}</i> ${linkHtml}
-                    <p><i>O projekcie:</i> ${proj.opis}</p>
-                </li>
-            `;
+            html += `<li><i>${proj.nazwa}</i> ${linkHtml}<p><i>O projekcie:</i> ${proj.opis}</p></li>`;
         });
         html += `</ul></li>`;
     }
@@ -471,18 +488,14 @@ function renderPage(data) {
     appContainer.innerHTML = `
         <h2>Umiejętności <button id="u" onclick="Um()">Pokaż sekcję</button></h2>
         <section id="Umiejętności" style="display: none;">
-            <div>
-                <ol>
-                    <li><b>Języki (web-)programowania: </b> ${jezyki.join(', ')}</li>
-                    <li><b>Narzędzia:</b> ${narzedzia.join(', ')}</li>
-                    <li><b>Język(i) obcy(-e):</b> ${jezykiObce}</li>
-                    <li><b>Umiejętności miękkie:</b> ${miekkie.join(', ')}</li>
-                </ol>
-            </div>
+            <div><ol>
+                <li><b>Języki (web-)programowania: </b> ${jezyki.join(', ')}</li>
+                <li><b>Narzędzia:</b> ${narzedzia.join(', ')}</li>
+                <li><b>Język(i) obcy(-e):</b> ${jezykiObce}</li>
+                <li><b>Umiejętności miękkie:</b> ${miekkie.join(', ')}</li>
+            </ol></div>
         </section>
-        
         <br/>
-        
         <h2>Projekty <button id="p" onclick="Proj()">Pokaż sekcję</button></h2>
         <section id="Projekty" style="display: none;">
             <p>W przeszłym roku robiłem różne projekty z korzystaniem C#, HTML i SQL</p>
@@ -494,9 +507,7 @@ function renderPage(data) {
     `;
 }
 
-// Funkcja dla sekcji Umiejętności
 var isUmShown = false;
-
 function Um() {
     const um = document.getElementById('Umiejętności');
     const u = document.getElementById('u');
@@ -505,25 +516,19 @@ function Um() {
             um.style.display = 'block';
             um.style.opacity = '1';
             um.style.height = 'auto';
-            um.style.transition = 'all 0.4s ease';
             isUmShown = true;
             u.textContent = 'Ukryj sekcję';
-            console.log('[' + new Date().toLocaleString() + '] sekcja Umiejętności została pokazana');
         } else {
             um.style.display = 'none';
             um.style.opacity = '0';
             um.style.height = '0';
-            um.style.transition = 'all 0.4s ease';
             isUmShown = false;
             u.textContent = 'Pokaż sekcję';
-            console.log('[' + new Date().toLocaleString() + '] sekcja Umiejętności została ukryta');
         }
     }
 }
 
-// Funkcja dla sekcji Projekty
 var isProjShown = false;
-
 function Proj() {
     const proj = document.getElementById('Projekty');
     const p = document.getElementById('p');
@@ -532,25 +537,19 @@ function Proj() {
             proj.style.display = 'block';
             proj.style.opacity = '1';
             proj.style.height = 'auto';
-            proj.style.transition = 'all 0.4s ease';
             isProjShown = true;
             p.textContent = 'Ukryj sekcję';
-            console.log('[' + new Date().toLocaleString() + '] sekcja Projektów została pokazana');
         } else {
             proj.style.display = 'none';
             proj.style.opacity = '0';
             proj.style.height = '0';
-            proj.style.transition = 'all 0.4s ease';
             isProjShown = false;
             p.textContent = 'Pokaż sekcję';
-            console.log('[' + new Date().toLocaleString() + '] sekcja Projektów została ukryta');
         }
     }
 }
 
-// Funkcja dla listy projektów
 var isListOfProjectsShown = true;
-
 function projekty() {
     const pokazSection = document.getElementById('PokazProjekty');
     const text = document.getElementById('O_projektach');
@@ -559,64 +558,38 @@ function projekty() {
             pokazSection.style.display = 'none';
             text.textContent = 'Pokaż listę projektów';
             isListOfProjectsShown = false;
-            console.log('[' + new Date().toLocaleString() + '] lista projektów została ukryta');
         } else {
             pokazSection.style.display = 'block';
             text.textContent = 'Ukryj listę projektów';
             isListOfProjectsShown = true;
-            console.log('[' + new Date().toLocaleString() + '] lista projektów została pokazana');
         }
     }
 }
 
 async function loadData() {
     appContainer.innerHTML = '<div style="padding: 2rem; text-align: center;">⏳ Ładowanie danych...</div>';
-
     try {
         const response = await fetch('data.json');
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: Nie można pobrać data.json`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         console.log('✅ Dane załadowane z pliku JSON:', data);
         renderPage(data);
     } catch (error) {
-        console.warn('⚠️ Błąd ładowania data.json, używam danych domyślnych:', error.message);
-        
-        appContainer.innerHTML = `
-            <div style="background: #fef3c7; border-left: 5px solid #f59e0b; border-radius: 1rem; padding: 0.8rem 1.2rem; margin-bottom: 1rem; color: #78350f;">
-                ⚠️ <strong>Uwaga:</strong> Nie udało się załadować pliku <code>data.json</code>. 
-                Wyświetlam dane przykładowe.
-            </div>
-        `;
+        console.warn('⚠️ Błąd ładowania data.json, używam danych domyślnych');
+        appContainer.innerHTML = `<div style="background: #fef3c7; border-left: 5px solid #f59e0b; border-radius: 1rem; padding: 0.8rem; margin-bottom: 1rem;">
+            ⚠️ Nie udało się załadować data.json. Wyświetlam dane przykładowe.
+        </div>`;
         renderPage(DEFAULT_DATA);
-        console.log('📦 Użyto domyślnych danych (fallback)');
     }
 }
 
-// ============ INICJALIZACJA ============
-// Podpięcie event listenerów
+// ============ INICJALIZACJA (NA KOŃCU!) ============
 form.addEventListener('submit', onSubmitHandler);
 attachLiveValidation();
 clearAllErrorsAndFeedback();
-
-// Załaduj dane z JSON
 loadData();
 
-// Załaduj historię wiadomości z Supabase po starcie strony
+// To jest bezpieczne – funkcja displayAllMessages istnieje teraz przed wywołaniem
 document.addEventListener('DOMContentLoaded', () => {
     displayAllMessages().catch(err => console.log('Supabase inicjalizacja:', err));
 });
-async function fetchAllMessages() {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
-    });
-    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
-    
-    const text = await response.text();
-    if (!text || !text.trim()) return [];
-    return JSON.parse(text);
-}
