@@ -1,0 +1,34 @@
+{
+  "umiejetnosci": {
+    "jezyki": ["C#", "HTML", "CSS", "SQL"],
+    "narzedzia": ["Visual Studio", "SQL Server Management Studio"],
+    "jezyki_obce": "Angielski (B1+)",
+    "miekkie": ["komunikatywność", "praca w zespole", "myślenie analityczne"]
+  },
+  "projekty": [
+    {
+      "kategoria": "C#",
+      "nazwa": "Analizator funkcji matematycznych",
+      "link": "https://github.com/77551-andrii-gyrya/Analizator-funkcji-matematycznych",
+      "opis": "Program, który analizuje funkcje matematyczne, oblicza ich wartości i rysuje wykresy."
+    },
+    {
+      "kategoria": "C#",
+      "nazwa": "Symulator Bankomatu i Automatu Vendingowego",
+      "link": "https://github.com/77551-andrii-gyrya/Symulator-bankomatu-i-automatu-vendingowego",
+      "opis": "Program symulujący działanie bankomatu i automatu vendingowego."
+    },
+    {
+      "kategoria": "SQL",
+      "nazwa": "Projektowanie i implementacja bazy danych dla sklepu internetowego",
+      "link": null,
+      "opis": "Projekt bazy danych dla sklepu internetowego – produkty, klienci, zamówienia."
+    },
+    {
+      "kategoria": "HTML",
+      "nazwa": "CV jako strona internetowa",
+      "link": "https://77551-andrii-gyrya.github.io/zad1_cv/",
+      "opis": "CV jako strona internetowa z umiejętnościami, doświadczeniem i kontaktem."
+    }
+  ]
+}

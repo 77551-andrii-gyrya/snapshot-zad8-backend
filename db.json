@@ -1,0 +1,12 @@
+{
+  "messages": [
+    {
+      "id": 1,
+      "firstName": "Anna",
+      "lastName": "Kowalska",
+      "email": "anna@example.com",
+      "message": "To jest przykładowa wiadomość",
+      "createdAt": "2026-05-12T14:30:00.000Z"
+    }
+  ]
+}

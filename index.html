@@ -1,0 +1,172 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Zadanie 8 - Backend</title>
+    <link id="theme-style" rel="stylesheet" href="red.css"/>
+</head>
+<body>
+    <header>
+    
+        <h1>
+            Andrii Gyrya 
+            Nr.Albumu: PL77551
+            <button id="Zmiana_stylu" onclick="zstylu()">Zmień motyw</button>
+        </h1>
+        
+    </header>
+    
+    <main>
+        <h2>O mnie <button id="om" onclick="oMnie()">Pokaz sekcję</button></h2>
+        <section id="O">
+            <p>
+                Jestem studentem Vistula University, kierunek Informatyka. Interesuję się programowaniem,
+                a także lubię uczyć się nowych technologii i narzędzi. Jestem osobą komunikatywną, pracowitą i zorganizowaną,
+                co pozwala mi efektywnie pracować zarówno samodzielnie, jak i w zespole.
+            </p>
+            <p>
+                Moim celem jest rozwijanie swoich umiejętności programistycznych i zdobywanie doświadczenia w branży IT.
+                Lubię rozwiązywać problemy i tworzyć innowacyjne rozwiązania, które mogą mieć pozytywny wpływ na życie ludzi.
+                Bardzo interesuję się również sztuczną inteligencją i uczeniem maszynowym, dlatego planuję rozwijać swoje umiejętności w tych obszarach.
+                poza tym, jestem otwarty na nowe wyzwania i chętnie podejmuję się różnych projektów, które pozwalają mi rozwijać się zarówno zawodowo, jak i osobiście.
+            </p>
+            
+                <p>Moje zdjęcia profilowe (zdjęcia zrobione przeze mnie):</p>
+                <img src="Resources/photo1.jpg" alt="Zdjęcie profilowe" />
+                <img itemscope src="Resources/photo2.jpg" alt="Zdjęcie profilowe" />
+            
+        </section>
+        <br />
+        
+        <br />
+        
+        <br />
+        <h2>Edukacja <button id="e" onclick="Ed()">Pokaz sekcję</button></h2>
+        <section id="Edukacja">
+            
+            <div>
+                <ol>
+                    <li>
+                        <b>2014-2025:</b> Zaporożski Kolegium "Elint" matematyczny profil. Ukraina, Zaporoże
+                    </li>
+                    <li>
+                        <b>2025-(dziś):</b> Vistula University, kierunek Informatyka, studia licencjackie. Polska, Warszawa
+                    </li>
+                </ol>
+            </div>
+        </section>
+        <div class="todo-container">
+            <h3>📋 Moja lista zadań (Local Storage)</h3>
+            <div class="todo-input-group">
+                <input type="text" id="todoInput" placeholder="Napisz zadanie np. 'Przygotować prezentację'" autocomplete="off">
+                <button class="add-btn" id="addTodoBtn">➕ Dodaj zadanie</button>
+            </div>
+            
+            <ul class="todo-list" id="todoListContainer">
+                <li class="empty-message">✨ Brak zadań. Dodaj pierwsze zadanie!</li>
+            </ul>
+            <div class="storage-stats" id="storageInfo"></div>
+        </div>
+        <hr />
+        <br/>
+        <div id="app">
+            <div class="loading">Ładowanie danych z pliku JSON...</div>
+        </div>
+        <h2>Doświadczenie <button id="d" onclick="Doś()">Pokaz sekcję</button></h2>
+        <section id="Doświadczenie">
+            
+            <p>     Nie mam doświadczenia zawodowego, ale mam doświadczenie w realizacji różnych projektów programistycznych, 
+            zarówno indywidualnych, jak i zespołowych. Pracowałem nad projektami, o których było omówiono wcześniej. 
+            Te projekty pozwoliły mi zdobyć praktyczne umiejętności programistyczne i doświadczenie w pracy z różnymi technologiami.</p>
+            <p>     Jeszcze nie miałem okazji zdobyć doświadczenia zawodowego,
+            ale jestem otwarty na różne możliwości i chętnie podejmę się praktyk lub stażu, 
+            aby zdobyć cenne doświadczenie w branży IT. Jestem zmotywowany do nauki i rozwoju, 
+            więc jestem gotów podjąć się różnych wyzwań, które pozwolą mi zdobyć praktyczne umiejętności i doświadczenie zawodowe.</p>
+        </section>
+        
+    </main>
+    <section>
+        <div class="form-card">
+    <h1>Wyślij wiadomość</h1>
+    <div class="sub">Wszystkie pola są wymagane</div>
+
+    <form id="contactForm" novalidate>
+        <!-- Pole: imię -->
+        <div class="form-group" id="group-firstname">
+            <label>
+                <span>Imię</span><span class="required-star">*</span>
+            </label>
+            <input type="text" id="firstname" name="firstname" placeholder="np. Anna" autocomplete="given-name">
+            <div class="error-message" id="error-firstname" style="display: none;"></div>
+        </div>
+
+        <!-- Pole: nazwisko -->
+        <div class="form-group" id="group-lastname">
+            <label>
+                <span>Nazwisko</span><span class="required-star">*</span>
+            </label>
+            <input type="text" id="lastname" name="lastname" placeholder="np. Kowalska" autocomplete="family-name">
+            <div class="error-message" id="error-lastname" style="display: none;"></div>
+        </div>
+
+        <!-- Pole: e-mail -->
+        <div class="form-group" id="group-email">
+            <label>
+                <span>Adres e-mail</span><span class="required-star">*</span>
+            </label>
+            <input type="email" id="email" name="email" placeholder="anna.kowalska@example.com" autocomplete="email">
+            <div class="error-message" id="error-email" style="display: none;"></div>
+        </div>
+
+        <!-- Pole: wiadomość (treść) -->
+        <div class="form-group" id="group-message">
+            <label>
+                <span>Wiadomość</span><span class="required-star">*</span>
+            </label>
+            <input type="text" id="message" name="message" placeholder="Treść twojej wiadomości...">
+            <div class="error-message" id="error-message" style="display: none;"></div>
+        </div>
+
+        <button type="submit" id="submitBtn"> Wyślij</button>
+    </form>
+
+    <div id="formFeedback" style="min-height: 80px;"></div>
+    <hr />
+    <div class="info-badge">
+        Walidacja: pola wymagane, poprawny e-mail, brak cyfr w imieniu i nazwisku
+    </div>
+</div>
+    </section>
+    <footer>
+        <section>
+            <h2>Kontakt</h2>
+            <div> 
+                
+                <p>Mailto: <a href="mailto:agyrya1@stu.vistula.edu.pl">agyrya1@stu.vistula.edu.pl</a></p> 
+                        
+                <p>tel: <a href="tel:+48511491651">+48 511 491 651</a></p>
+                        
+                <p>Miasto: Warszawa</p>
+               
+                <p>
+                    Moje sieci społecznościowe:
+                    <ul id="1">
+                        <li>
+                            Mój Instagram: <a href="https://www.instagram.com/andrii_gyrya/">@andrii_gyrya</a>
+                        </li>
+                        <li> 
+                            Mój YouTube: <a href="https://www.youtube.com/@AndriiGyrya">@AndriiGyrya</a> 
+                        </li> 
+                    </ul> 
+                    
+                </p>
+                
+            </div>
+        </section>
+    </footer>
+<script src="script.js">
+    
+</script>
+</body>
+</html>
