@@ -259,26 +259,49 @@ function validateFieldOnBlur(fieldName) {
     }
 }
 
+// ============ KONFIGURACJA SUPABASE ============
+const SUPABASE_URL = 'https://nbkuiuzhjcnmqnkpynlp.supabase.co';  // PODMIEŃ!
+const SUPABASE_ANON_KEY = 'sb_publishable_Dbjy-SOH2EdnPdlyi2r_Gw_e-8K9lNy';           // PODMIEŃ!
+
+// ============ ZAPIS DANYCH DO SUPABASE ============
 async function saveToBackend(formData) {
-    const response = await fetch('http://localhost:3000/messages', {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
-            ...formData,
-            createdAt: new Date().toISOString()
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            message: formData.message
         })
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
     }
 
     return await response.json();
 }
 
-// ============ OBSŁUGA WYSYŁANIA FORMULARZA (z zapisem backend) ============
+// ============ POBIERZ WSZYSTKIE WIADOMOŚCI (do historii) ============
+async function fetchAllMessages() {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    
+    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
+    return await response.json();
+}
+
+// ============ OBSŁUGA WYSYŁANIA FORMULARZA (z zapisem do Supabase) ============
 async function onSubmitHandler(event) {
     event.preventDefault();
     resetFeedback();
@@ -304,85 +327,90 @@ async function onSubmitHandler(event) {
         message: messageInput.value.trim()
     };
 
-    // Wyświetlenie informacji o wysyłaniu
+    // Blokada przycisku podczas wysyłania
     const submitBtn = document.getElementById('submitBtn');
     const originalBtnText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Wysyłanie...';
+    submitBtn.textContent = '⏳ Wysyłanie do Supabase...';
     submitBtn.disabled = true;
 
     try {
+        // Zapis do Supabase
         const savedData = await saveToBackend(formData);
         
-        // Sukces
+        // ✅ SUKCES - wyświetl komunikat
         feedbackDiv.innerHTML = `
             <div class="success-message" style="background: #1f3b2c; border-left: 5px solid #4ade80;">
-                ✅ <strong>Wiadomość została zapisana na serwerze!</strong><br>
+                ✅ <strong>Wiadomość została zapisana w Supabase!</strong><br>
                 📨 Otrzymano: ${escapeHtml(formData.firstName)} ${escapeHtml(formData.lastName)}<br>
                 📧 ${escapeHtml(formData.email)}<br>
                 💬 ${escapeHtml(formData.message)}<br>
                 <hr style="margin: 8px 0; border-color: #2e5a3a;">
-                🗄️ <strong>Gdzie trafiły dane?</strong> Zostały zapisane w pliku <code>db.json</code> na serwerze (backend).<br>
-                🆔 ID w bazie: ${savedData.id} | 📅 Data: ${new Date(savedData.createdAt).toLocaleString()}
+                🗄️ <strong>Gdzie trafiły dane?</strong> Zostały zapisane w bazie PostgreSQL (Supabase).<br>
+                🆔 ID w bazie: ${savedData[0]?.id || 'ok'} | 📅 Data: ${new Date().toLocaleString()}
             </div>
         `;
         
-        // Opcjonalnie: pokaż wszystkie zapisane wiadomości
-        await displayAllMessages();
+        // ==================================================
+        // 🔄 TUTAJ WSTAW ODSWieŻANIE LISTY WIADOMOŚCI
+        // ==================================================
+        await displayAllMessages();  // Funkcja pokazująca historię z Supabase
         
-        // Wyczyść formularz
+        // Wyczyść formularz po sukcesie
         form.reset();
         clearAllErrorsAndFeedback();
         
     } catch (error) {
-        console.error('Błąd zapisu:', error);
+        console.error('Błąd zapisu do Supabase:', error);
         feedbackDiv.innerHTML = `
             <div style="background:#fee2e2; border-left:4px solid #dc2626; padding:0.8rem; border-radius: 1rem; margin-top: 1rem; color:#991b1b;">
-                ❌ <strong>Błąd połączenia z serwerem!</strong><br>
-                Upewnij się, że backend jest uruchomiony:<br>
-                <code style="background:#1a1a2e; padding:4px 8px; border-radius:6px; display:inline-block; margin-top:6px;">
-                npm run server
-                </code><br>
-                Dane NIE zostały zapisane na serwerze.
+                ❌ <strong>Błąd połączenia z Supabase!</strong><br>
+                ${error.message}<br>
+                Sprawdź konsolę (F12) i konfigurację (URL/klucz).
             </div>
         `;
     } finally {
+        // Odblokowanie przycisku
         submitBtn.textContent = originalBtnText;
         submitBtn.disabled = false;
     }
 }
 
-// ============ WYŚWIETLENIE WSZYSTKICH ZAPISANYCH WIADOMOŚCI ============
+// ============ WYŚWIETLENIE HISTORII WIADOMOŚCI Z SUPABASE ============
 async function displayAllMessages() {
     try {
-        const response = await fetch('http://localhost:3000/messages');
-        if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
+        const messages = await fetchAllMessages();  // Używa funkcji fetchAllMessages
         
-        const messages = await response.json();
+        if (!messages || messages.length === 0) {
+            // Ukryj lub wyczyść sekcję, jeśli brak danych
+            const historySection = document.getElementById('messagesHistory');
+            if (historySection) historySection.style.display = 'none';
+            return;
+        }
         
-        if (messages.length === 0) return;
-        
-        // Dodaj sekcję z historią wiadomości (jeśli nie istnieje)
+        // Przygotuj sekcję historii
         let historySection = document.getElementById('messagesHistory');
         if (!historySection) {
             historySection = document.createElement('div');
             historySection.id = 'messagesHistory';
-            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px;';
+            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px;';
             const formCard = document.querySelector('.form-card');
             if (formCard) formCard.appendChild(historySection);
         }
         
+        historySection.style.display = 'block';
         historySection.innerHTML = `
-            <h3>📋 Historia zapisanych wiadomości (backend)</h3>
-            <ul style="max-height: 200px; overflow-y: auto; padding-left: 20px;">
-                ${messages.slice().reverse().map(msg => `
-                    <li style="margin: 8px 0; padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.2);">
-                        <strong>${escapeHtml(msg.firstName)} ${escapeHtml(msg.lastName)}</strong> (${escapeHtml(msg.email)})<br>
-                        <small>📅 ${new Date(msg.createdAt).toLocaleString()}</small><br>
+            <h3>📋 Historia zapisanych wiadomości (Supabase - PostgreSQL)</h3>
+            <ul style="max-height: 250px; overflow-y: auto; padding-left: 20px;">
+                ${messages.map(msg => `
+                    <li style="margin: 10px 0; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <strong>${escapeHtml(msg.first_name)} ${escapeHtml(msg.last_name)}</strong> 
+                        (${escapeHtml(msg.email)})<br>
+                        <small>📅 ${new Date(msg.created_at).toLocaleString()}</small><br>
                         <em>${escapeHtml(msg.message)}</em>
                     </li>
                 `).join('')}
             </ul>
-            <small>📁 Dane przechowywane w pliku <code>db.json</code> na serwerze</small>
+            <small>📁 Dane przechowywane w chmurze Supabase (PostgreSQL)</small>
         `;
     } catch (error) {
         console.warn('Nie można wyświetlić historii:', error);
@@ -797,3 +825,9 @@ loadData();
                 initLocalStorage();
             }
         })();
+// Załaduj historię po załadowaniu strony (jeśli Supabase działa)
+document.addEventListener('DOMContentLoaded', () => {
+    displayAllMessages().catch(err => {
+        console.log('Supabase niedostępny lub brak konfiguracji');
+    });
+});
