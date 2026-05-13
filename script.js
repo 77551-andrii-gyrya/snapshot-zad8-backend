@@ -283,7 +283,6 @@ function attachLiveValidation() {
     });
 }
 
-// ============ FUNKCJE DO KOMUNIKACJI Z SUPABASE ============
 async function saveToBackend(formData) {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
         method: 'POST',
@@ -301,55 +300,26 @@ async function saveToBackend(formData) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const error = await response.json();
+            errorMessage = error.message || errorMessage;
+        } catch(e) {
+            // Ignoruj błąd parsowania JSON w odpowiedzi błędu
+        }
+        throw new Error(errorMessage);
     }
-    return await response.json();
-}
-
-async function fetchAllMessages() {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
-    });
-    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
-    return await response.json();
-}
-
-async function displayAllMessages() {
+    
+    // Supabase zwraca pustą odpowiedź lub tablicę z danymi
+    // Spróbuj sparsować JSON, ale jeśli się nie uda – zwróć pusty obiekt
     try {
-        const messages = await fetchAllMessages();
-        let historySection = document.getElementById('messagesHistory');
-        if (!historySection) {
-            historySection = document.createElement('div');
-            historySection.id = 'messagesHistory';
-            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px;';
-            const formCard = document.querySelector('.form-card');
-            if (formCard) formCard.appendChild(historySection);
+        const text = await response.text();
+        if (text && text.trim()) {
+            return JSON.parse(text);
         }
-        if (!messages || messages.length === 0) {
-            historySection.style.display = 'none';
-            return;
-        }
-        historySection.style.display = 'block';
-        historySection.innerHTML = `
-            <h3>📋 Historia zapisanych wiadomości (Supabase - PostgreSQL)</h3>
-            <ul style="max-height: 250px; overflow-y: auto; padding-left: 20px;">
-                ${messages.map(msg => `
-                    <li style="margin: 10px 0; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.2);">
-                        <strong>${escapeHtml(msg.first_name)} ${escapeHtml(msg.last_name)}</strong> 
-                        (${escapeHtml(msg.email)})<br>
-                        <small>📅 ${new Date(msg.created_at).toLocaleString()}</small><br>
-                        <em>${escapeHtml(msg.message)}</em>
-                    </li>
-                `).join('')}
-            </ul>
-            <small>📁 Dane przechowywane w chmurze Supabase (PostgreSQL)</small>
-        `;
-    } catch (error) {
-        console.warn('Nie można wyświetlić historii:', error);
+        return { success: true, message: "Dodano wiersz" };
+    } catch(e) {
+        return { success: true, message: "Dodano wiersz" };
     }
 }
 
@@ -637,3 +607,16 @@ loadData();
 document.addEventListener('DOMContentLoaded', () => {
     displayAllMessages().catch(err => console.log('Supabase inicjalizacja:', err));
 });
+async function fetchAllMessages() {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
+    
+    const text = await response.text();
+    if (!text || !text.trim()) return [];
+    return JSON.parse(text);
+}
