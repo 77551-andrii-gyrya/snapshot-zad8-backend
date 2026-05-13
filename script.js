@@ -1,3 +1,10 @@
+// ==================================================
+// 🔧 KONFIGURACJA SUPABASE - TWOJE DANE
+// ==================================================
+const SUPABASE_URL = 'https://nbkuiuzhjcnmqnkpynlp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Dbjy-SOH2EdnPdlyi2r_Gw_e-8K9lNy';
+// ==================================================
+
 // ============ ZMIANA MOTYWU ============
 var isHomeStyle = true;
 
@@ -226,17 +233,6 @@ function escapeHtml(str) {
     });
 }
 
-function showSuccessMessage(data) {
-    feedbackDiv.innerHTML = `
-        <div class="success-message">
-            ✅ Wiadomość została wysłana (symulacja)!<br>
-            <strong>Odebrane dane:</strong> ${escapeHtml(data.firstName)} ${escapeHtml(data.lastName)}<br>
-            📧 ${escapeHtml(data.email)}<br>
-            💬 ${escapeHtml(data.message)}
-        </div>
-    `;
-}
-
 function resetFeedback() {
     feedbackDiv.innerHTML = '';
 }
@@ -258,169 +254,6 @@ function validateFieldOnBlur(fieldName) {
             break;
     }
 }
-
-// ============ KONFIGURACJA SUPABASE ============
-const SUPABASE_URL = 'https://nbkuiuzhjcnmqnkpynlp.supabase.co';  // PODMIEŃ!
-const SUPABASE_ANON_KEY = 'sb_publishable_Dbjy-SOH2EdnPdlyi2r_Gw_e-8K9lNy';           // PODMIEŃ!
-
-// ============ ZAPIS DANYCH DO SUPABASE ============
-async function saveToBackend(formData) {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            message: formData.message
-        })
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}`);
-    }
-
-    return await response.json();
-}
-
-// ============ POBIERZ WSZYSTKIE WIADOMOŚCI (do historii) ============
-async function fetchAllMessages() {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
-    });
-    
-    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
-    return await response.json();
-}
-
-// ============ OBSŁUGA WYSYŁANIA FORMULARZA (z zapisem do Supabase) ============
-async function onSubmitHandler(event) {
-    event.preventDefault();
-    resetFeedback();
-    clearAllErrorsAndFeedback();
-
-    const errors = validateForm();
-    const hasErrors = Object.values(errors).some(err => err !== null);
-
-    if (hasErrors) {
-        displayErrors(errors);
-        feedbackDiv.innerHTML = `<div style="background:#fee2e2; border-left:4px solid #e53e3e; padding:0.8rem; border-radius: 1rem; margin-top: 1rem; color:#9b2c2c;">
-                                    ⚠️ Formularz zawiera błędy. Popraw zaznaczone pola.
-                                  </div>`;
-        const firstErrorField = document.querySelector('.error-input');
-        if (firstErrorField) firstErrorField.focus();
-        return;
-    }
-
-    const formData = {
-        firstName: firstNameInput.value.trim(),
-        lastName: lastNameInput.value.trim(),
-        email: emailInput.value.trim(),
-        message: messageInput.value.trim()
-    };
-
-    // Blokada przycisku podczas wysyłania
-    const submitBtn = document.getElementById('submitBtn');
-    const originalBtnText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Wysyłanie do Supabase...';
-    submitBtn.disabled = true;
-
-    try {
-        // Zapis do Supabase
-        const savedData = await saveToBackend(formData);
-        
-        // ✅ SUKCES - wyświetl komunikat
-        feedbackDiv.innerHTML = `
-            <div class="success-message" style="background: #1f3b2c; border-left: 5px solid #4ade80;">
-                ✅ <strong>Wiadomość została zapisana w Supabase!</strong><br>
-                📨 Otrzymano: ${escapeHtml(formData.firstName)} ${escapeHtml(formData.lastName)}<br>
-                📧 ${escapeHtml(formData.email)}<br>
-                💬 ${escapeHtml(formData.message)}<br>
-                <hr style="margin: 8px 0; border-color: #2e5a3a;">
-                🗄️ <strong>Gdzie trafiły dane?</strong> Zostały zapisane w bazie PostgreSQL (Supabase).<br>
-                🆔 ID w bazie: ${savedData[0]?.id || 'ok'} | 📅 Data: ${new Date().toLocaleString()}
-            </div>
-        `;
-        
-        // ==================================================
-        // 🔄 TUTAJ WSTAW ODSWieŻANIE LISTY WIADOMOŚCI
-        // ==================================================
-        await displayAllMessages();  // Funkcja pokazująca historię z Supabase
-        
-        // Wyczyść formularz po sukcesie
-        form.reset();
-        clearAllErrorsAndFeedback();
-        
-    } catch (error) {
-        console.error('Błąd zapisu do Supabase:', error);
-        feedbackDiv.innerHTML = `
-            <div style="background:#fee2e2; border-left:4px solid #dc2626; padding:0.8rem; border-radius: 1rem; margin-top: 1rem; color:#991b1b;">
-                ❌ <strong>Błąd połączenia z Supabase!</strong><br>
-                ${error.message}<br>
-                Sprawdź konsolę (F12) i konfigurację (URL/klucz).
-            </div>
-        `;
-    } finally {
-        // Odblokowanie przycisku
-        submitBtn.textContent = originalBtnText;
-        submitBtn.disabled = false;
-    }
-}
-
-// ============ WYŚWIETLENIE HISTORII WIADOMOŚCI Z SUPABASE ============
-async function displayAllMessages() {
-    try {
-        const messages = await fetchAllMessages();  // Używa funkcji fetchAllMessages
-        
-        if (!messages || messages.length === 0) {
-            // Ukryj lub wyczyść sekcję, jeśli brak danych
-            const historySection = document.getElementById('messagesHistory');
-            if (historySection) historySection.style.display = 'none';
-            return;
-        }
-        
-        // Przygotuj sekcję historii
-        let historySection = document.getElementById('messagesHistory');
-        if (!historySection) {
-            historySection = document.createElement('div');
-            historySection.id = 'messagesHistory';
-            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px;';
-            const formCard = document.querySelector('.form-card');
-            if (formCard) formCard.appendChild(historySection);
-        }
-        
-        historySection.style.display = 'block';
-        historySection.innerHTML = `
-            <h3>📋 Historia zapisanych wiadomości (Supabase - PostgreSQL)</h3>
-            <ul style="max-height: 250px; overflow-y: auto; padding-left: 20px;">
-                ${messages.map(msg => `
-                    <li style="margin: 10px 0; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.2);">
-                        <strong>${escapeHtml(msg.first_name)} ${escapeHtml(msg.last_name)}</strong> 
-                        (${escapeHtml(msg.email)})<br>
-                        <small>📅 ${new Date(msg.created_at).toLocaleString()}</small><br>
-                        <em>${escapeHtml(msg.message)}</em>
-                    </li>
-                `).join('')}
-            </ul>
-            <small>📁 Dane przechowywane w chmurze Supabase (PostgreSQL)</small>
-        `;
-    } catch (error) {
-        console.warn('Nie można wyświetlić historii:', error);
-    }
-}
-
-// Załaduj historię przy starcie strony (jeśli serwer działa)
-document.addEventListener('DOMContentLoaded', () => {
-    displayAllMessages().catch(() => {});
-});
 
 function attachLiveValidation() {
     firstNameInput.addEventListener('blur', () => validateFieldOnBlur('firstname'));
@@ -450,9 +283,142 @@ function attachLiveValidation() {
     });
 }
 
-form.addEventListener('submit', onSubmitHandler);
-attachLiveValidation();
-clearAllErrorsAndFeedback();
+// ============ FUNKCJE DO KOMUNIKACJI Z SUPABASE ============
+async function saveToBackend(formData) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            message: formData.message
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    return await response.json();
+}
+
+async function fetchAllMessages() {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.desc`, {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+    });
+    if (!response.ok) throw new Error('Nie udało się pobrać wiadomości');
+    return await response.json();
+}
+
+async function displayAllMessages() {
+    try {
+        const messages = await fetchAllMessages();
+        let historySection = document.getElementById('messagesHistory');
+        if (!historySection) {
+            historySection = document.createElement('div');
+            historySection.id = 'messagesHistory';
+            historySection.style.cssText = 'margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px;';
+            const formCard = document.querySelector('.form-card');
+            if (formCard) formCard.appendChild(historySection);
+        }
+        if (!messages || messages.length === 0) {
+            historySection.style.display = 'none';
+            return;
+        }
+        historySection.style.display = 'block';
+        historySection.innerHTML = `
+            <h3>📋 Historia zapisanych wiadomości (Supabase - PostgreSQL)</h3>
+            <ul style="max-height: 250px; overflow-y: auto; padding-left: 20px;">
+                ${messages.map(msg => `
+                    <li style="margin: 10px 0; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <strong>${escapeHtml(msg.first_name)} ${escapeHtml(msg.last_name)}</strong> 
+                        (${escapeHtml(msg.email)})<br>
+                        <small>📅 ${new Date(msg.created_at).toLocaleString()}</small><br>
+                        <em>${escapeHtml(msg.message)}</em>
+                    </li>
+                `).join('')}
+            </ul>
+            <small>📁 Dane przechowywane w chmurze Supabase (PostgreSQL)</small>
+        `;
+    } catch (error) {
+        console.warn('Nie można wyświetlić historii:', error);
+    }
+}
+
+// ============ OBSŁUGA WYSYŁANIA FORMULARZA (z zapisem do Supabase) ============
+async function onSubmitHandler(event) {
+    event.preventDefault();
+    resetFeedback();
+    clearAllErrorsAndFeedback();
+
+    const errors = validateForm();
+    const hasErrors = Object.values(errors).some(err => err !== null);
+
+    if (hasErrors) {
+        displayErrors(errors);
+        feedbackDiv.innerHTML = `<div style="background:#fee2e2; border-left:4px solid #e53e3e; padding:0.8rem; border-radius: 1rem; margin-top: 1rem; color:#9b2c2c;">
+                                    ⚠️ Formularz zawiera błędy. Popraw zaznaczone pola.
+                                  </div>`;
+        const firstErrorField = document.querySelector('.error-input');
+        if (firstErrorField) firstErrorField.focus();
+        return;
+    }
+
+    const formData = {
+        firstName: firstNameInput.value.trim(),
+        lastName: lastNameInput.value.trim(),
+        email: emailInput.value.trim(),
+        message: messageInput.value.trim()
+    };
+
+    const submitBtn = document.getElementById('submitBtn');
+    const originalBtnText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Wysyłanie do Supabase...';
+    submitBtn.disabled = true;
+
+    try {
+        const savedData = await saveToBackend(formData);
+        
+        feedbackDiv.innerHTML = `
+            <div class="success-message" style="background: #1f3b2c; border-left: 5px solid #4ade80;">
+                ✅ <strong>Wiadomość została zapisana w Supabase!</strong><br>
+                📨 Otrzymano: ${escapeHtml(formData.firstName)} ${escapeHtml(formData.lastName)}<br>
+                📧 ${escapeHtml(formData.email)}<br>
+                💬 ${escapeHtml(formData.message)}<br>
+                <hr style="margin: 8px 0; border-color: #2e5a3a;">
+                🗄️ <strong>Gdzie trafiły dane?</strong> Zostały zapisane w bazie PostgreSQL (Supabase).<br>
+                🆔 ID w bazie: ${savedData[0]?.id || 'ok'} | 📅 Data: ${new Date().toLocaleString()}
+            </div>
+        `;
+        
+        // 🔄 ODSWieŻENIE LISTY WIADOMOŚCI
+        await displayAllMessages();
+        
+        form.reset();
+        clearAllErrorsAndFeedback();
+        
+    } catch (error) {
+        console.error('Błąd zapisu do Supabase:', error);
+        feedbackDiv.innerHTML = `
+            <div style="background:#fee2e2; border-left:4px solid #dc2626; padding:0.8rem; border-radius: 1rem; margin-top: 1rem; color:#991b1b;">
+                ❌ <strong>Błąd połączenia z Supabase!</strong><br>
+                ${error.message}<br>
+                Sprawdź konsolę (F12) i upewnij się, że tabela 'messages' istnieje w Supabase.
+            </div>
+        `;
+    } finally {
+        submitBtn.textContent = originalBtnText;
+        submitBtn.disabled = false;
+    }
+}
 
 // ============ DYNAMICZNE ŁADOWANIE DANYCH Z JSON (z fallbackiem) ============
 const appContainer = document.getElementById('app');
@@ -637,7 +603,6 @@ async function loadData() {
     appContainer.innerHTML = '<div style="padding: 2rem; text-align: center;">⏳ Ładowanie danych...</div>';
 
     try {
-        // Próba załadowania z pliku JSON
         const response = await fetch('data.json');
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: Nie można pobrać data.json`);
@@ -648,186 +613,27 @@ async function loadData() {
     } catch (error) {
         console.warn('⚠️ Błąd ładowania data.json, używam danych domyślnych:', error.message);
         
-        // Użycie danych domyślnych z fallbackiem
         appContainer.innerHTML = `
             <div style="background: #fef3c7; border-left: 5px solid #f59e0b; border-radius: 1rem; padding: 0.8rem 1.2rem; margin-bottom: 1rem; color: #78350f;">
                 ⚠️ <strong>Uwaga:</strong> Nie udało się załadować pliku <code>data.json</code>. 
-                Wyświetlam dane przykładowe. Aby wczytać własne dane:
-                <ul style="margin: 0.5rem 0 0 1.5rem;">
-                    <li>Uruchom stronę przez <strong>Live Server</strong> w VS Code</li>
-                    <li>Lub umieść pliki na serwerze lokalnym (np. XAMPP, Python HTTP server)</li>
-                    <li>Sprawdź czy plik <code>data.json</code> istnieje w tym samym folderze co <code>index.html</code></li>
-                </ul>
+                Wyświetlam dane przykładowe.
             </div>
         `;
-        // Renderowanie z domyślnymi danymi
         renderPage(DEFAULT_DATA);
         console.log('📦 Użyto domyślnych danych (fallback)');
     }
 }
 
-// Wywołanie ładowania danych
+// ============ INICJALIZACJA ============
+// Podpięcie event listenerów
+form.addEventListener('submit', onSubmitHandler);
+attachLiveValidation();
+clearAllErrorsAndFeedback();
+
+// Załaduj dane z JSON
 loadData();
 
-
-
-// ========================
-        // MODUŁ LOCAL STORAGE (lista zadań)
-        // ========================
-        (function() {
-            // Klucz pod jakim dane są przechowywane w localStorage
-            const STORAGE_KEY = 'user_todo_list';
-            
-            // Referencje do elementów DOM
-            const todoInput = document.getElementById('todoInput');
-            const addBtn = document.getElementById('addTodoBtn');
-            const todoContainer = document.getElementById('todoListContainer');
-            const storageInfo = document.getElementById('storageInfo');
-            
-            // ---------- Funkcje pomocnicze ----------
-            // Pobieranie listy zadań z localStorage
-            function getTasks() {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (!stored) {
-                    return []; // brak zadań
-                }
-                try {
-                    return JSON.parse(stored);
-                } catch(e) {
-                    console.error('Błąd parsowania JSON z localStorage', e);
-                    return [];
-                }
-            }
-            
-            // Zapis listy zadań do localStorage
-            function saveTasks(tasks) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-                // Dodatkowo: wyświetlenie przybliżonego rozmiaru (debug)
-                const size = new Blob([JSON.stringify(tasks)]).size;
-                if (storageInfo) {
-                    storageInfo.innerHTML = `📦 Zapisanoh elementów: ${tasks.length} | ~${size} bajtów`;
-                }
-            }
-            
-            // Renderowanie listy zadań na stronie
-            function renderTodoList() {
-                const tasks = getTasks();
-                if (!todoContainer) return;
-                
-                // Czyścimy kontener (oprócz ewentualnych statycznych wiadomości)
-                todoContainer.innerHTML = '';
-                
-                if (tasks.length === 0) {
-                    todoContainer.innerHTML = '<li class="empty-message">📭 Brak zadań. Dodaj pierwsze zadanie!</li>';
-                    if(storageInfo) storageInfo.innerHTML = `📦 Brak danych | 0 bajtów`;
-                    return;
-                }
-                
-                // Dla każdego zadania tworzymy element li
-                tasks.forEach((task, index) => {
-                    const li = document.createElement('li');
-                    
-                    const spanText = document.createElement('span');
-                    spanText.className = 'todo-text';
-                    spanText.textContent = task.text;   // text zadania
-                    
-                    const delBtn = document.createElement('button');
-                    delBtn.textContent = '🗑 Usuń';
-                    delBtn.className = 'delete-btn';
-                    // Obsługa usuwania – przekazujemy index zadania
-                    delBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        deleteTaskByIndex(index);
-                    });
-                    
-                    li.appendChild(spanText);
-                    li.appendChild(delBtn);
-                    todoContainer.appendChild(li);
-                });
-                
-                // Aktualizacja info o rozmiarze
-                const raw = JSON.stringify(tasks);
-                const size = new Blob([raw]).size;
-                if(storageInfo) storageInfo.innerHTML = `📦 Zadania: ${tasks.length} | Zajętość: ~${size} bajtów`;
-            }
-            
-            // Dodanie nowego zadania
-            function addNewTask() {
-                if (!todoInput) return;
-                const rawText = todoInput.value.trim();
-                if (rawText === "") {
-                    alert("Proszę wpisać treść zadania!");
-                    return;
-                }
-                
-                const currentTasks = getTasks();
-                // nowe zadanie - unikalne ID oparte na czasie (opcjonalnie) ale używamy indeksu, struktura: { id: Date.now(), text: ... }
-                const newTask = {
-                    id: Date.now(),
-                    text: rawText
-                };
-                currentTasks.push(newTask);
-                saveTasks(currentTasks);
-                renderTodoList();
-                // Czyszczenie pola input
-                todoInput.value = "";
-                // Fokus z powrotem
-                todoInput.focus();
-                console.log(`[LocalStorage] Dodano zadanie: "${rawText}"`);
-            }
-            
-            // Usuwanie zadania po indeksie (licząc wg aktualnej tablicy)
-            function deleteTaskByIndex(index) {
-                const tasks = getTasks();
-                if (index >= 0 && index < tasks.length) {
-                    const removed = tasks.splice(index, 1);
-                    saveTasks(tasks);
-                    renderTodoList();
-                    console.log(`[LocalStorage] Usunięto zadanie: "${removed[0]?.text}"`);
-                } else {
-                    console.warn("Nieprawidłowy indeks do usunięcia");
-                }
-            }
-            
-            // Obsługa przycisku dodawania
-            if (addBtn) {
-                addBtn.addEventListener('click', addNewTask);
-            }
-            // Dodanie obsługi klawisza Enter w polu tekstowym
-            if (todoInput) {
-                todoInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addNewTask();
-                    }
-                });
-            }
-            
-            // Inicjalizacja - odczyt i renderowanie przy starcie (po załadowaniu DOM)
-            function initLocalStorage() {
-                renderTodoList();
-                // Sprawdzenie czy localStorage jest dostępne
-                try {
-                    const testKey = '__test_ls';
-                    localStorage.setItem(testKey, 'ok');
-                    localStorage.removeItem(testKey);
-                    console.log("localStorage jest dostępny");
-                } catch(e) {
-                    console.warn("localStorage niedostępny!", e);
-                    if(storageInfo) storageInfo.innerHTML = "⚠️ localStorage niedostępny w przeglądarce";
-                }
-            }
-            
-            // Wywołanie po pełnym załadowaniu DOM
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initLocalStorage);
-            } else {
-                initLocalStorage();
-            }
-        })();
-// Załaduj historię po załadowaniu strony (jeśli Supabase działa)
+// Załaduj historię wiadomości z Supabase po starcie strony
 document.addEventListener('DOMContentLoaded', () => {
-    displayAllMessages().catch(err => {
-        console.log('Supabase niedostępny lub brak konfiguracji');
-    });
+    displayAllMessages().catch(err => console.log('Supabase inicjalizacja:', err));
 });
